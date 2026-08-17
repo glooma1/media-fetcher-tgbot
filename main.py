@@ -9,6 +9,7 @@ from aiogram.enums import ParseMode
 from aiogram.types import Message, FSInputFile, InputMediaPhoto, InputMediaVideo, URLInputFile
 
 from modules.downloaders import get_short_video, get_ig_post, get_ytmusic, get_x_post_content, clean_file
+from modules.speechtotext import speechtotext_router
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ delay = config.getint("Downloader", "delay", fallback=2)
 
 dp = Dispatcher()
 
+dp.include_router(speechtotext_router)
 # -----------------------------
 
 CONTENT_PATTERNS = (
