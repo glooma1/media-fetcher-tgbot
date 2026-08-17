@@ -1,0 +1,8 @@
+services:
+  media-downloader-tgbot:
+    build: .
+    container_name: media-downloader-tgbot
+    restart: unless-stopped
+    shm_size: '1gb'
+    volumes:
+      - ./config.ini:/app/config.ini
