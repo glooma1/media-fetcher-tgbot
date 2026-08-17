@@ -6,6 +6,7 @@ import configparser
 import instaloader
 import re
 import requests
+
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def clean_file(file_path: str):
 
 # Reels, Tiktok, Yt-shorts
 def get_short_video(url: str):
-    logging.info(f"Handling short video download: {url}")
+    logger.info(f"Handling short video download: {url}")
 
     ydl_opts = {
             'format': 'best[ext=mp4][vcodec^=avc1]/best[ext=mp4]/best',
@@ -62,7 +63,7 @@ def get_short_video(url: str):
             caption = info.get('description') or info.get('title') or "Instagram Post"
             author = info.get('uploader') or info.get('uploader_id') or 'Unknown'
 
-            logging.info(f"Download completed succesfully ({url})")
+            logger.info(f"Download completed succesfully ({url})")
             return {
                 "files": [{"path": file_path, "type": "video"}],
                 "caption": caption,
@@ -77,7 +78,7 @@ def get_short_video(url: str):
 
 # Yt-music
 def get_ytmusic(url: str):
-    logging.info(f"Handling music download: {url}")
+    logger.info(f"Handling music download: {url}")
 
     ydl_opts = {
             'format': 'bestaudio/best',
@@ -111,7 +112,7 @@ def get_ytmusic(url: str):
             title = info.get('track') or info.get('title') or "Unknown track"
             artist = info.get('artist') or info.get('uploader') or info.get('uploader_id') or 'Unknown'
 
-            logging.info(f"Download completed succesfully ({url})")
+            logger.info(f"Download completed succesfully ({url})")
 
             return {
                 "files": [{"path": file_path, "type": "audio"}],
@@ -127,7 +128,7 @@ def get_ytmusic(url: str):
 
 # Instagram posts
 def get_ig_post(url: str):
-    logging.info(f"Handling instagram post download: {url}")
+    logger.info(f"Handling instagram post download: {url}")
 
     try:
         match = re.search(r"instagram\.com/p/([^/?]+)", url)
@@ -166,7 +167,7 @@ def get_ig_post(url: str):
         if not downloaded_paths:
             return {"error": "Не вдалося завантажити файли."}
 
-        logging.info(f"Download completed succesfully ({url})")
+        logger.info(f"Download completed succesfully ({url})")
         return {
             "type": "ig_post",
             "files": downloaded_paths,
@@ -181,7 +182,7 @@ def get_ig_post(url: str):
 
 # Twitter/x posts
 def get_x_post_content(url: str) -> dict:
-    logging.info(f"Handling x/twitter post download: {url}")
+    logger.info(f"Handling x/twitter post download: {url}")
 
     try:
         parsed = urlparse(url)
@@ -197,7 +198,7 @@ def get_x_post_content(url: str) -> dict:
         response = requests.get(api_url, timeout=10)
 
         if response.status_code != 200:
-            logging.error(
+            logger.error(
                 f"Failed to fetch data from vxtwitter API. "
                 f"Status code: {response.status_code}, URL: {api_url}"
             )

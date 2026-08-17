@@ -1,6 +1,7 @@
 import logging
 import configparser
 import uuid
+
 from openai import AsyncOpenAI
 from aiogram import Router, F
 from aiogram.types import Message

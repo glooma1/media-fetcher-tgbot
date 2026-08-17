@@ -8,6 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import Message, FSInputFile, InputMediaPhoto, InputMediaVideo, URLInputFile
 
+from modules.logging import setup_logging
 from modules.downloaders import get_short_video, get_ig_post, get_ytmusic, get_x_post_content, clean_file
 from modules.speechtotext import speechtotext_router
 
@@ -81,6 +82,8 @@ async def with_retries(processing_msg: Message, get_function, url: str):
 
 @dp.message(extract_content_info)
 async def handle_download_request(message: Message, url: str, content_type: str):
+
+    logger.info(f"@{message.from_user.username or message.from_user.id} -> {content_type}: {url}")
     processing_msg = await message.reply("⏳ Обробляю посилання...")
 
     downloader = DOWNLOADERS.get(content_type)
@@ -181,14 +184,6 @@ async def main():
               default=DefaultBotProperties(parse_mode=ParseMode.HTML, link_preview_is_disabled=True))
     await dp.start_polling(bot)
 
-
 if __name__ == "__main__":
-    log_formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(log_formatter)
-
-    logging.basicConfig(level=logging.INFO, handlers=[console_handler])
+    setup_logging()
     asyncio.run(main())
