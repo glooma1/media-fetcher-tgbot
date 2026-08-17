@@ -8,7 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import Message, FSInputFile, InputMediaPhoto, InputMediaVideo, URLInputFile
 
-from modules.downloaders import download_short_video, download_ig_post, download_ytmusic, get_x_post_content, clean_file
+from modules.downloaders import get_short_video, get_ig_post, get_ytmusic, get_x_post_content, clean_file
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ config.read("config.ini", encoding="utf-8")
 
 TOKEN = config["Telegram"]["TOKEN"]
 retries = config.getint("Downloader", "retries", fallback=3)
-delay = config.getint("Downloader", "delay", fallback=1)
+delay = config.getint("Downloader", "delay", fallback=2)
 
 dp = Dispatcher()
 
@@ -34,9 +34,9 @@ CONTENT_PATTERNS = (
 )
 
 DOWNLOADERS = {
-    "short_video": download_short_video,
-    "instagram_post": download_ig_post,
-    "music": download_ytmusic,
+    "short_video": get_short_video,
+    "instagram_post": get_ig_post,
+    "music": get_ytmusic,
     "x_post": get_x_post_content,
 }
 
@@ -55,7 +55,7 @@ def extract_content_info(message: Message):
 
     return False
 
-async def with_retries(processing_msg: Message, download_function, url: str):
+async def with_retries(processing_msg: Message, get_function, url: str):
     result = None
     for attempt in range(1, retries + 1):
         if attempt > 1:
@@ -64,7 +64,7 @@ async def with_retries(processing_msg: Message, download_function, url: str):
             except Exception as e:
                 logger.error(f"Unable to edit message: {e}")
 
-        result = await asyncio.to_thread(download_function, url)
+        result = await asyncio.to_thread(get_function, url)
 
         if not result.get("error"):
             return result
@@ -141,7 +141,13 @@ async def handle_download_request(message: Message, url: str, content_type: str)
         else:
             media_group = []
             for index, file_info in enumerate(files):
-                media = FSInputFile(file_info["path"])
+                file_path = file_info["path"]
+
+                if file_path.startswith(("http://", "https://")):
+                    media = file_path
+                else:
+                    media = FSInputFile(file_path)
+
                 media_caption = final_text if index == 0 else None
 
                 if file_info["type"] in ("video", "gif"):

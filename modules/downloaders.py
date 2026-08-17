@@ -29,7 +29,7 @@ def clean_file(file_path: str):
 
 
 # Reels, Tiktok, Yt-shorts
-def download_short_video(url: str):
+def get_short_video(url: str):
     logging.info(f"Handling short video download: {url}")
 
     ydl_opts = {
@@ -76,7 +76,7 @@ def download_short_video(url: str):
 
 
 # Yt-music
-def download_ytmusic(url: str):
+def get_ytmusic(url: str):
     logging.info(f"Handling music download: {url}")
 
     ydl_opts = {
@@ -126,7 +126,7 @@ def download_ytmusic(url: str):
 
 
 # Instagram posts
-def download_ig_post(url: str):
+def get_ig_post(url: str):
     logging.info(f"Handling instagram post download: {url}")
 
     try:
@@ -234,6 +234,4 @@ def get_x_post_content(url: str) -> dict:
         return {"error": str(e)}
 
 if __name__ == "__main__":
-    print(
-        get_x_post_content("https://x.com/BorisenkoBoris/status/2086423833813127335?s=20")
-    )
+    print("Nothing ever happens")
