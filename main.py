@@ -14,7 +14,10 @@ logger = logging.getLogger(__name__)
 
 config = configparser.ConfigParser()
 config.read("config.ini", encoding="utf-8")
+
 TOKEN = config["Telegram"]["TOKEN"]
+retries = config.getint("Downloader", "retries", fallback=3)
+delay = config.getint("Downloader", "delay", fallback=1)
 
 dp = Dispatcher()
 
@@ -52,6 +55,27 @@ def extract_content_info(message: Message):
 
     return False
 
+async def with_retries(processing_msg: Message, download_function, url: str):
+    result = None
+    for attempt in range(1, retries + 1):
+        if attempt > 1:
+            try:
+                await processing_msg.edit_text(f"⏳ Спроба {attempt}/{retries}...")
+            except Exception as e:
+                logger.error(f"Unable to edit message: {e}")
+
+        result = await asyncio.to_thread(download_function, url)
+
+        if not result.get("error"):
+            return result
+
+        logger.warning(f"Attempt {attempt}/{retries} unsuccessful ({url}): {result['error']}")
+
+        if attempt < retries:
+            await asyncio.sleep(delay + 1)
+
+    return result
+
 
 @dp.message(extract_content_info)
 async def handle_download_request(message: Message, url: str, content_type: str):
@@ -64,17 +88,14 @@ async def handle_download_request(message: Message, url: str, content_type: str)
         return
 
     # --- ЗАВАНТАЖЕННЯ ---
-    result = await asyncio.to_thread(downloader, url)
+    result = await with_retries(processing_msg, downloader, url)
 
     # --- ПЕРЕВІРКА РЕЗУЛЬТАТІВ ---
     if result.get("error"):
-        await processing_msg.edit_text(f"❌ Помилка: {result['error']}")
+        await processing_msg.edit_text(f"❌ Помилка: <blockquote expandable>{result['error']}</blockquote>")
         return
 
     files = result.get("files", [])
-    # if not files:
-    #     await processing_msg.edit_text("❌ Помилка: Файли не знайдено.")
-    #     return
 
     # --- ФОРМУВАННЯ ТЕКСТУ ---
     sender = html.quote(message.from_user.username or message.from_user.full_name)
@@ -93,7 +114,7 @@ async def handle_download_request(message: Message, url: str, content_type: str)
             await message.answer(text=final_text, parse_mode=ParseMode.HTML)
             await processing_msg.delete()
             return
-        
+
         if len(files) == 1:
             file_info = files[0]
             file_path = file_info["path"]
@@ -103,10 +124,10 @@ async def handle_download_request(message: Message, url: str, content_type: str)
             else:
                 media = FSInputFile(file_info["path"])
 
-            if file_info["type"] in ("video" or "gif"):
+            if file_info["type"] in ("video", "gif"):
                 await message.answer_video(video=media, caption=final_text, parse_mode=ParseMode.HTML)
 
-            elif file_info["type"] == ("photo" or "image"):
+            elif file_info["type"] in ("photo", "image"):
                 await message.answer_photo(photo=media, caption=final_text, parse_mode=ParseMode.HTML)
 
             else:
@@ -123,7 +144,7 @@ async def handle_download_request(message: Message, url: str, content_type: str)
                 media = FSInputFile(file_info["path"])
                 media_caption = final_text if index == 0 else None
 
-                if file_info["type"] == "video":
+                if file_info["type"] in ("video", "gif"):
                     media_group.append(InputMediaVideo(media=media, caption=media_caption, parse_mode=ParseMode.HTML))
                 else:
                     media_group.append(InputMediaPhoto(media=media, caption=media_caption, parse_mode=ParseMode.HTML))
@@ -148,7 +169,8 @@ async def handle_download_request(message: Message, url: str, content_type: str)
 # -----------------------------
 
 async def main():
-    bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    bot = Bot(token=TOKEN,
+              default=DefaultBotProperties(parse_mode=ParseMode.HTML, link_preview_is_disabled=True))
     await dp.start_polling(bot)
 
 
