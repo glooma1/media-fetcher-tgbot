@@ -5,17 +5,13 @@ import uuid
 from openai import AsyncOpenAI
 from aiogram import Router, F
 from aiogram.types import Message
-from dotenv import load_dotenv
+from modules.config import DOWNLOADS_PATH, OPENAI_API_KEY
 from modules.downloaders import clean_file
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-downloads_path = os.getenv("DOWNLOADS_PATH", "/dev/shm")
-api_key = os.getenv("OPENAI_API_KEY")
-
 client = AsyncOpenAI(
-    api_key=api_key
+    api_key=OPENAI_API_KEY
 )
 
 speechtotext_router = Router(name="speechtotext")
@@ -28,17 +24,17 @@ async def _get_voice_transcription(filepath:str):
                 file=audio,
                 language="uk"
             )
-        return transcription.text()
+        return transcription.text
     
     except Exception as e:
         logger.error(f"Whisper API error: {e}")
-        return {"error": str(e)}
+        raise
 
 
 @speechtotext_router.message(F.voice)
 async def handle_voice_message(message: Message):
     processing_msg = await message.reply("🎧 Слухаю...")
-    file_path = f"{downloads_path}{uuid.uuid4()}.ogg"
+    file_path = f"{DOWNLOADS_PATH}{uuid.uuid4()}.ogg"
 
     try:
         file_info = await message.bot.get_file(message.voice.file_id)

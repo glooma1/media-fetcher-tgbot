@@ -8,16 +8,13 @@ from aiogram.enums import ParseMode
 from aiogram.types import Message, FSInputFile, InputMediaPhoto, InputMediaVideo, URLInputFile
 from dotenv import load_dotenv
 
+from modules.config import BOT_TOKEN, DOWNLOADS_RETRIES, DOWNLOADS_DELAY
 from modules.logging import setup_logging
 from modules.downloaders import get_short_video, get_ig_post, get_ytmusic, get_x_post_content, clean_file
 from modules.speechtotext import speechtotext_router
 
-logger = logging.getLogger(__name__)
 
-load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN")
-retries = int(os.getenv("DOWNLOADS_RETRIES", 3))
-delay = int(os.getenv("DOWNLOADS_DELAY", 2))
+logger = logging.getLogger(__name__)
 
 dp = Dispatcher()
 dp.include_router(speechtotext_router)
@@ -57,10 +54,10 @@ def extract_content_info(message: Message):
 
 async def with_retries(processing_msg: Message, get_function, url: str):
     result = None
-    for attempt in range(1, retries + 1):
+    for attempt in range(1, DOWNLOADS_RETRIES + 1):
         if attempt > 1:
             try:
-                await processing_msg.edit_text(f"⏳ Спроба {attempt}/{retries}...")
+                await processing_msg.edit_text(f"⏳ Спроба {attempt}/{DOWNLOADS_RETRIES}...")
             except Exception as e:
                 logger.error(f"Unable to edit message: {e}")
 
@@ -69,10 +66,10 @@ async def with_retries(processing_msg: Message, get_function, url: str):
         if not result.get("error"):
             return result
 
-        logger.warning(f"Attempt {attempt}/{retries} unsuccessful ({url}): {result['error']}")
+        logger.warning(f"Attempt {attempt}/{DOWNLOADS_RETRIES} unsuccessful ({url}): {result['error']}")
 
-        if attempt < retries:
-            await asyncio.sleep(delay + 1)
+        if attempt < DOWNLOADS_RETRIES:
+            await asyncio.sleep(DOWNLOADS_DELAY + 1)
 
     return result
 
@@ -81,7 +78,7 @@ async def with_retries(processing_msg: Message, get_function, url: str):
 async def handle_download_request(message: Message, url: str, content_type: str):
 
     logger.info(f"@{message.from_user.username or message.from_user.id} -> {content_type}: {url}")
-    processing_msg = await message.reply("⏳ Обробляю посилання...")
+    processing_msg = await message.reply("⏳ Завантажую...")
 
     downloader = DOWNLOADERS.get(content_type)
 
@@ -102,7 +99,7 @@ async def handle_download_request(message: Message, url: str, content_type: str)
     # --- ФОРМУВАННЯ ТЕКСТУ ---
     sender = html.quote(message.from_user.username or message.from_user.full_name)
     author = html.quote(result.get("author", "Unknown"))
-    caption = html.quote(result.get("caption", "Без опису"))[:800]
+    caption = html.quote(result.get("caption", "Без опису")[:800])
 
     final_text = (
         f"<b>@{sender}</b> -- <a href='{url}'>🔗</a>\n"
@@ -113,7 +110,7 @@ async def handle_download_request(message: Message, url: str, content_type: str)
     # --- ВІДПРАВКА ---
     try:
         if not files:
-            await message.answer(text=final_text, parse_mode=ParseMode.HTML)
+            await message.answer(text=final_text)
             await processing_msg.delete()
             return
 
@@ -127,16 +124,15 @@ async def handle_download_request(message: Message, url: str, content_type: str)
                 media = FSInputFile(file_info["path"])
 
             if file_info["type"] in ("video", "gif"):
-                await message.answer_video(video=media, caption=final_text, parse_mode=ParseMode.HTML)
+                await message.answer_video(video=media, caption=final_text)
 
             elif file_info["type"] in ("photo", "image"):
-                await message.answer_photo(photo=media, caption=final_text, parse_mode=ParseMode.HTML)
+                await message.answer_photo(photo=media, caption=final_text)
 
             else:
                 await message.answer_audio(
                     audio=media,
                     caption=f"<b>@{sender}</b> -- <a href='{url}'>🔗</a>",
-                    parse_mode=ParseMode.HTML,
                     title=caption,
                     performer=author
                 )
@@ -153,9 +149,9 @@ async def handle_download_request(message: Message, url: str, content_type: str)
                 media_caption = final_text if index == 0 else None
 
                 if file_info["type"] in ("video", "gif"):
-                    media_group.append(InputMediaVideo(media=media, caption=media_caption, parse_mode=ParseMode.HTML))
+                    media_group.append(InputMediaVideo(media=media, caption=media_caption))
                 else:
-                    media_group.append(InputMediaPhoto(media=media, caption=media_caption, parse_mode=ParseMode.HTML))
+                    media_group.append(InputMediaPhoto(media=media, caption=media_caption))
 
             await message.answer_media_group(media=media_group)
 
@@ -177,7 +173,7 @@ async def handle_download_request(message: Message, url: str, content_type: str)
 # -----------------------------
 
 async def main():
-    bot = Bot(token=TOKEN,
+    bot = Bot(token=BOT_TOKEN,
               default=DefaultBotProperties(parse_mode=ParseMode.HTML, link_preview_is_disabled=True))
     await dp.start_polling(bot)
 

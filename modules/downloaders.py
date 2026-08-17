@@ -7,14 +7,10 @@ import re
 import requests
 
 from urllib.parse import urlparse
-from dotenv import load_dotenv
+from modules.config import DOWNLOADS_PATH, DOWNLOADS_RETRIES
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-
-downloads_path = os.getenv("DOWNLOADS_PATH", "/dev/shm")
-retries = int(os.getenv("DOWNLOADS_RETRIES", 3))
 
 # ==================================================================================
 
@@ -35,11 +31,11 @@ def get_short_video(url: str):
 
     ydl_opts = {
             'format': 'best[ext=mp4][vcodec^=avc1]/best[ext=mp4]/best',
-            'outtmpl': f'{downloads_path}{uuid.uuid4()}.%(ext)s',
+            'outtmpl': f'{DOWNLOADS_PATH}{uuid.uuid4()}.%(ext)s',
             'quiet': True,
             'noplaylist': True,
             'socket_timeout': 30,
-            'retries': retries,
+            'retries': DOWNLOADS_RETRIES,
         }
 
     # -=-=- Cookies
@@ -82,11 +78,11 @@ def get_ytmusic(url: str):
 
     ydl_opts = {
             'format': 'bestaudio/best',
-            'outtmpl': f'{downloads_path}{uuid.uuid4()}.%(ext)s',
+            'outtmpl': f'{DOWNLOADS_PATH}{uuid.uuid4()}.%(ext)s',
             'quiet': True,
             'noplaylist': True,
             'socket_timeout': 30,
-            'retries': retries,
+            'retries': DOWNLOADS_RETRIES,
             'postprocessors': [
                 {
                     'key': 'FFmpegExtractAudio',
@@ -156,20 +152,21 @@ def get_ig_post(url: str):
 
         downloaded_paths = []
         for item in media_files:
-            file_path = f"{downloads_path}{uuid.uuid4()}.{item['ext']}"
+            file_path = f"{DOWNLOADS_PATH}{uuid.uuid4()}.{item['ext']}"
             
             response = requests.get(item["url"], timeout=15)
             if response.status_code == 200:
                 with open(file_path, "wb") as f:
                     f.write(response.content)
                 downloaded_paths.append({"path": file_path, "type": item["type"]})
+            else:
+                logger.warning(f"Instagram item pull error {url}")
 
         if not downloaded_paths:
             return {"error": "Не вдалося завантажити файли."}
 
         logger.info(f"Download completed succesfully ({url})")
         return {
-            "type": "ig_post",
             "files": downloaded_paths,
             "caption": post.caption or "Без опису",
             "author": post.owner_username or "Unknown",
@@ -217,21 +214,16 @@ def get_x_post_content(url: str) -> dict:
                             'path': item.get("url"),
                             'type': item.get("type")
                         })
-                     
-        elif "media_urls" in data:
-            media_urls = data["media_urls"]
 
         return {
-            "type": "x_post",
             "files": media_urls,
             "caption": caption or "Без опису",
             "author": author or "Unknown",
             "error": None,
         }
 
-
     except Exception as e:
-        logger.error(f"Instagram pull error {url}: {e}")
+        logger.error(f"X/Twitter pull error {url}: {e}")
         return {"error": str(e)}
 
 if __name__ == "__main__":
