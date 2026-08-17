@@ -6,11 +6,10 @@ from aiogram import Bot, Dispatcher, html
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import Message, FSInputFile, InputMediaPhoto, InputMediaVideo, URLInputFile
-from dotenv import load_dotenv
 
 from modules.config import BOT_TOKEN, DOWNLOADS_RETRIES, DOWNLOADS_DELAY
 from modules.logging import setup_logging
-from modules.downloaders import get_short_video, get_ig_post, get_ytmusic, get_x_post_content, clean_file
+from modules.downloaders import get_short_video, get_ig_post, get_ytmusic, get_x_post_content, clean_file, PulledData
 from modules.speechtotext import speechtotext_router
 
 
@@ -63,10 +62,10 @@ async def with_retries(processing_msg: Message, get_function, url: str):
 
         result = await asyncio.to_thread(get_function, url)
 
-        if not result.get("error"):
+        if not result.error:
             return result
 
-        logger.warning(f"Attempt {attempt}/{DOWNLOADS_RETRIES} unsuccessful ({url}): {result['error']}")
+        logger.warning(f"Attempt {attempt}/{DOWNLOADS_RETRIES} unsuccessful ({url}): {result.error}")
 
         if attempt < DOWNLOADS_RETRIES:
             await asyncio.sleep(DOWNLOADS_DELAY + 1)
@@ -90,16 +89,14 @@ async def handle_download_request(message: Message, url: str, content_type: str)
     result = await with_retries(processing_msg, downloader, url)
 
     # --- ПЕРЕВІРКА РЕЗУЛЬТАТІВ ---
-    if result.get("error"):
-        await processing_msg.edit_text(f"❌ Помилка: <blockquote expandable>{result['error']}</blockquote>")
+    if result.error:
+        await processing_msg.edit_text(f"❌ Помилка: <blockquote expandable>{result.error}</blockquote>")
         return
-
-    files = result.get("files", [])
 
     # --- ФОРМУВАННЯ ТЕКСТУ ---
     sender = html.quote(message.from_user.username or message.from_user.full_name)
-    author = html.quote(result.get("author", "Unknown"))
-    caption = html.quote(result.get("caption", "Без опису")[:800])
+    author = html.quote(result.author)
+    caption = html.quote(result.caption[:800])
 
     final_text = (
         f"<b>@{sender}</b> -- <a href='{url}'>🔗</a>\n"
@@ -109,26 +106,20 @@ async def handle_download_request(message: Message, url: str, content_type: str)
 
     # --- ВІДПРАВКА ---
     try:
-        if not files:
+        if not result.files:
             await message.answer(text=final_text)
             await processing_msg.delete()
             return
 
-        if len(files) == 1:
-            file_info = files[0]
-            file_path = file_info["path"]
+        if len(result.files) == 1:
+            media_file = result.files[0]
+            
+            media = URLInputFile(media_file.path) if media_file.is_remote else FSInputFile(media_file.path)
 
-            if file_path.startswith(("http://", "https://")):
-                media = URLInputFile(file_path)
-            else:
-                media = FSInputFile(file_info["path"])
-
-            if file_info["type"] in ("video", "gif"):
+            if media_file.type in ("video", "gif"):
                 await message.answer_video(video=media, caption=final_text)
-
-            elif file_info["type"] in ("photo", "image"):
+            elif media_file.type in ("photo", "image"):
                 await message.answer_photo(photo=media, caption=final_text)
-
             else:
                 await message.answer_audio(
                     audio=media,
@@ -138,17 +129,12 @@ async def handle_download_request(message: Message, url: str, content_type: str)
                 )
         else:
             media_group = []
-            for index, file_info in enumerate(files):
-                file_path = file_info["path"]
-
-                if file_path.startswith(("http://", "https://")):
-                    media = file_path
-                else:
-                    media = FSInputFile(file_path)
-
+            for index, media_file in enumerate(result.files):
+                media = URLInputFile(media_file.path) if media_file.is_remote else FSInputFile(media_file.path)
+                
                 media_caption = final_text if index == 0 else None
 
-                if file_info["type"] in ("video", "gif"):
+                if media_file.type in ("video", "gif"):
                     media_group.append(InputMediaVideo(media=media, caption=media_caption))
                 else:
                     media_group.append(InputMediaPhoto(media=media, caption=media_caption))
@@ -159,11 +145,11 @@ async def handle_download_request(message: Message, url: str, content_type: str)
 
     except Exception as e:
         logger.error(f"Sending error: {e}")
-        await processing_msg.edit_text(f"❌ Сталася помилка при надсиланні: {e}")
+        await processing_msg.edit_text(f"❌ Сталася помилка під час надсилання: {e}")
 
     finally:
-        for file_info in files:
-            clean_file(file_info["path"])
+        for media_file in result.files:
+            clean_file(media_file)
 
     try:
         await message.delete()
