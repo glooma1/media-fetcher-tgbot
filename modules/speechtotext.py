@@ -1,19 +1,18 @@
 import logging
-import configparser
+import os
 import uuid
 
 from openai import AsyncOpenAI
 from aiogram import Router, F
 from aiogram.types import Message
+from dotenv import load_dotenv
 from modules.downloaders import clean_file
 
 logger = logging.getLogger(__name__)
 
-config = configparser.ConfigParser()
-config.read('config.ini')
-
-downloads_path = config.get('Downloader', 'path', fallback='/dev/shm/')
-api_key = config['Speech-to-text']['api_key']
+load_dotenv()
+downloads_path = os.getenv("DOWNLOADS_PATH", "/dev/shm")
+api_key = os.getenv("OPENAI_API_KEY")
 
 client = AsyncOpenAI(
     api_key=api_key

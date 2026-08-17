@@ -2,19 +2,19 @@ import os
 import logging
 import yt_dlp
 import uuid
-import configparser
 import instaloader
 import re
 import requests
 
 from urllib.parse import urlparse
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
-config = configparser.ConfigParser()
-config.read('config.ini')
 
-downloads_path = config.get('Downloader', 'path', fallback='/dev/shm/')
-retries = config.getint('Downloader', 'retries', fallback=3)
+load_dotenv()
+
+downloads_path = os.getenv("DOWNLOADS_PATH", "/dev/shm")
+retries = int(os.getenv("DOWNLOADS_RETRIES", 3))
 
 # ==================================================================================
 
@@ -22,7 +22,7 @@ def clean_file(file_path: str):
     if file_path and os.path.exists(file_path):
         try:
             os.remove(file_path)
-            logger.info(f"  Clean-up --- {file_path} deleted")
+            logger.info(f"Clean-up --- {file_path} deleted")
         except Exception as e:
             logger.error(f"Unable to delete {file_path}: {e}")
 
@@ -43,13 +43,13 @@ def get_short_video(url: str):
         }
 
     # -=-=- Cookies
-    if config.has_section('Downloader'):
-        cookies_from_browser = config.get('Downloader', 'instagram_cookies_from_browser', fallback=None)
-        cookies_file = config.get('Downloader', 'instagram_cookies_file', fallback=None)
-        if cookies_from_browser:
-            ydl_opts['cookiesfrombrowser'] = cookies_from_browser
-        elif cookies_file:
-            ydl_opts['cookiefile'] = cookies_file
+    # if config.has_section('Downloader'):
+    #     cookies_from_browser = config.get('Downloader', 'instagram_cookies_from_browser', fallback=None)
+    #     cookies_file = config.get('Downloader', 'instagram_cookies_file', fallback=None)
+    #     if cookies_from_browser:
+    #         ydl_opts['cookiesfrombrowser'] = cookies_from_browser
+    #     elif cookies_file:
+    #         ydl_opts['cookiefile'] = cookies_file
     # -=-=-
     
     try:

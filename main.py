@@ -1,12 +1,12 @@
 import asyncio
 import logging
-import sys
-import configparser
+import os
 
 from aiogram import Bot, Dispatcher, html
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import Message, FSInputFile, InputMediaPhoto, InputMediaVideo, URLInputFile
+from dotenv import load_dotenv
 
 from modules.logging import setup_logging
 from modules.downloaders import get_short_video, get_ig_post, get_ytmusic, get_x_post_content, clean_file
@@ -14,15 +14,12 @@ from modules.speechtotext import speechtotext_router
 
 logger = logging.getLogger(__name__)
 
-config = configparser.ConfigParser()
-config.read("config.ini", encoding="utf-8")
-
-TOKEN = config["Telegram"]["TOKEN"]
-retries = config.getint("Downloader", "retries", fallback=3)
-delay = config.getint("Downloader", "delay", fallback=2)
+load_dotenv()
+TOKEN = os.getenv("BOT_TOKEN")
+retries = int(os.getenv("DOWNLOADS_RETRIES", 3))
+delay = int(os.getenv("DOWNLOADS_DELAY", 2))
 
 dp = Dispatcher()
-
 dp.include_router(speechtotext_router)
 # -----------------------------
 
