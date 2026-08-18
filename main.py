@@ -20,6 +20,7 @@ from modules.downloaders import (
     get_x_post_content,
     get_ytmusic,
 )
+from modules.threads import get_threads_post
 from modules.logging import setup_logging
 from modules.speechtotext import speechtotext_router
 
@@ -39,6 +40,7 @@ CONTENT_PATTERNS = (
     ("x.com/", "x_post"),
     ("twitter.com/", "x_post"),
     ("music.youtube.com/", "music"),
+    ("threads.com/", "threads_post")
 )
 
 DOWNLOADERS = {
@@ -46,6 +48,7 @@ DOWNLOADERS = {
     "instagram_post": get_ig_post,
     "music": get_ytmusic,
     "x_post": get_x_post_content,
+    "threads_post": get_threads_post
 }
 
 def extract_content_info(message: Message):
