@@ -50,17 +50,17 @@ DOWNLOADERS = {
 
 def extract_content_info(message: Message):
     if not message.text:
-        return False
+        return None
 
     url = next((word for word in message.text.split() if "http" in word), None)
     if not url:
-        return False
+        return None
 
     for pattern, content_type in CONTENT_PATTERNS:
         if pattern in url:
             return {"url": url, "content_type": content_type}
 
-    return False
+    return None
 
 
 async def with_retries(processing_msg: Message, get_function, url: str):
@@ -155,7 +155,8 @@ async def handle_download_request(message: Message, url: str, content_type: str)
 async def main():
     bot = Bot(token=BOT_TOKEN,
               default=DefaultBotProperties(parse_mode=ParseMode.HTML, link_preview_is_disabled=True))
-    await dp.start_polling(bot)
+    async with bot:
+        await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
