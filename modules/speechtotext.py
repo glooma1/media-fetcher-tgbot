@@ -5,13 +5,13 @@ import uuid
 from openai import AsyncOpenAI
 from aiogram import Router, F
 from aiogram.types import Message
-from modules.config import DOWNLOADS_PATH, OPENAI_API_KEY
-from modules.downloaders import clean_file
+from modules.config import DOWNLOADS_PATH, OPENAI_SPEECH_API_KEY, OPENAI_SPEECH_MODEL
+from modules.downloaders import clean_file, Media
 
 logger = logging.getLogger(__name__)
 
 client = AsyncOpenAI(
-    api_key=OPENAI_API_KEY
+    api_key=OPENAI_SPEECH_API_KEY
 )
 
 speechtotext_router = Router(name="speechtotext")
@@ -20,7 +20,7 @@ async def _get_voice_transcription(filepath:str):
     try:
         with open(filepath, "rb") as audio:
             transcription = await client.audio.transcriptions.create(
-                model="whisper-1",
+                model=OPENAI_SPEECH_MODEL,
                 file=audio,
                 language="uk"
             )
@@ -53,5 +53,5 @@ async def handle_voice_message(message: Message):
         await processing_msg.edit_text(f"❌ Сталася помилка при обробці аудіо {e}")
 
     finally:
-        clean_file(file_path)
+        clean_file(Media(path=file_path, type="audio"))
 
