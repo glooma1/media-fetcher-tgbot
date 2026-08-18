@@ -10,6 +10,8 @@ COPY req.txt .
 
 RUN pip install --no-cache-dir -r req.txt
 
+RUN playwright install chromium --with-deps
+
 COPY . .
 
 CMD ["python", "main.py"]
