@@ -142,7 +142,7 @@ def download_media_files(media_list: list) -> list:
             response = requests.get(media_item["url"], timeout=15)
             response.raise_for_status()
         except requests.RequestException as e:
-            logger.warning(f"Не вдалось завантажити файл: {e}")
+            logger.warning(f"File download error: {e}")
             continue
 
         if media_item["type"] == "video":
@@ -162,7 +162,7 @@ def download_media_files(media_list: list) -> list:
 
 
 def get_threads_post(url: str) -> PulledData:
-    logger.info(f"Handling Threads post download: {url}")
+    logger.info(f"Fetching Threads post: {url}")
 
     shortcode = get_shortcode_from_url(url)
 
@@ -174,7 +174,7 @@ def get_threads_post(url: str) -> PulledData:
     try:
         final_url, html = open_page_in_browser(url_to_open)
     except Exception as e:
-        logger.error(f"Не вдалось відкрити сторінку {url}: {e}")
+        logger.error(f"Unable to open {url}: {e}")
         return PulledData(error=f"Не вдалося завантажити сторінку: {e}")
 
     if not shortcode:

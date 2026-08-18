@@ -31,7 +31,7 @@ def clean_file(media: Media):
     if not media.is_remote and media.path and os.path.exists(media.path):
         try:
             os.remove(media.path)
-            logger.info(f"Clean-up --- {media.path} deleted")
+            logger.info(f"Removed {media.path}")
         except Exception as e:
             logger.error(f"Unable to delete {media.path}: {e}")
 
@@ -39,7 +39,7 @@ def clean_file(media: Media):
 
 # Reels, Tiktok, Yt-shorts
 def get_short_video(url: str):
-    logger.info(f"Handling short video download: {url}")
+    logger.info(f"Fetching short video: {url}")
 
     ydl_opts = {
             'format': 'best[ext=mp4][vcodec^=avc1]/best[ext=mp4]/best',
@@ -61,7 +61,7 @@ def get_short_video(url: str):
             caption = info.get('description') or info.get('title') or "Без опису"
             author = info.get('uploader') or info.get('uploader_id') or 'Unknown'
 
-            logger.info(f"Download completed succesfully ({url})")
+            logger.info(f"Short video download complete ({url})")
 
             return PulledData(
                 files=[Media(path=file_path, type="video")],
@@ -70,12 +70,12 @@ def get_short_video(url: str):
             )
 
     except Exception as e:
-        logger.error(f"Downloading error {url}: {e}")
+        logger.error(f"Short video download error {url}: {e}")
         return PulledData(error=str(e))
 
 # Yt-music
 def get_ytmusic(url: str):
-    logger.info(f"Handling music download: {url}")
+    logger.info(f"Fetching yt-music: {url}")
 
     ydl_opts = {
             'format': 'bestaudio/best',
@@ -109,7 +109,7 @@ def get_ytmusic(url: str):
             title = info.get('track') or info.get('title') or "Unknown track"
             artist = info.get('artist') or info.get('uploader') or info.get('uploader_id') or 'Unknown'
 
-            logger.info(f"Download completed succesfully ({url})")
+            logger.info(f"Yt-music download complete ({url})")
 
             return PulledData(
                 files=[Media(path=file_path, type="audio")],
@@ -118,12 +118,12 @@ def get_ytmusic(url: str):
             )
 
     except Exception as e:
-        logger.error(f"Music downloading error {url}: {e}")
+        logger.error(f"Yt-music downloading error {url}: {e}")
         return PulledData(error=str(e))
 
 # Instagram posts
 def get_ig_post(url: str):
-    logger.info(f"Handling instagram post download: {url}")
+    logger.info(f"Fetching instagram post: {url}")
 
     try:
         match = re.search(r"instagram\.com/p/([^/?]+)", url)
@@ -157,14 +157,14 @@ def get_ig_post(url: str):
             if response.status_code == 200:
                 with open(file_path, "wb") as f:
                     f.write(response.content)
-                downloaded_media.append(Media(path=file_path, type=item["type"])) #({"path": file_path, "type": item["type"]})
+                downloaded_media.append(Media(path=file_path, type=item["type"]))
             else:
-                logger.warning(f"Instagram item pull error {url}")
+                logger.warning(f"Instagram (post) item fetch error {url}")
 
         if not downloaded_media:
             return PulledData(error="Не вдалося завантажити файли.")
 
-        logger.info(f"Download completed succesfully ({url})")
+        logger.info(f"Instagram post fetch complete ({url})")
         return PulledData(
             files=downloaded_media,
             caption= post.caption or "Без опису",
@@ -172,12 +172,12 @@ def get_ig_post(url: str):
         )
 
     except Exception as e:
-        logger.error(f"Instagram pull error {url}: {e}")
+        logger.error(f"Instagram fetch error {url}: {e}")
         return PulledData(error= str(e))
 
 # Twitter/x posts
 def get_x_post_content(url: str):
-    logger.info(f"Handling x/twitter post download: {url}")
+    logger.info(f"Fetching X/Twitter post: {url}")
 
     try:
         parsed = urlparse(url)
@@ -217,5 +217,5 @@ def get_x_post_content(url: str):
         )
 
     except Exception as e:
-        logger.error(f"X/Twitter pull error {url}: {e}")
+        logger.error(f"X/Twitter fetch error {url}: {e}")
         return PulledData(error=str(e))

@@ -91,7 +91,7 @@ async def with_retries(processing_msg: Message, get_function, url: str):
 
 @dp.message(extract_content_info)
 async def handle_download_request(message: Message, url: str, content_type: str):
-    logger.info(f"@{message.from_user.username or message.from_user.id} -> {content_type}: {url}")
+    logger.info(f"Request @{message.from_user.username or message.from_user.id} -> {content_type}: {url}")
     processing_msg = await message.reply("⏳ Завантажую...")
 
     downloader = DOWNLOADERS.get(content_type)

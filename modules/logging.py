@@ -24,7 +24,7 @@ class ColorFormatter(logging.Formatter):
 
 def setup_logging(level=logging.INFO):
     fmt = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-    datefmt = "%Y-%m-%d %H:%M:%S"
+    datefmt = "%d.%m.%y %H:%M:%S"
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(ColorFormatter(fmt, datefmt=datefmt))
