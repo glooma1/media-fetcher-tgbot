@@ -48,7 +48,7 @@ def get_short_video(url: str):
             'noplaylist': True,
             'socket_timeout': 30,
             'retries': DOWNLOADS_RETRIES,
-            'extractor_args': {'youtube': {'player_client': ['tv', 'ios', 'web']}},
+            'extractor_args': {'youtube': {'player_client': ['tv', 'ios', 'web', 'android', 'android_vr'],}},
         }
 
     try:
@@ -85,7 +85,7 @@ def get_ytmusic(url: str):
             'noplaylist': True,
             'socket_timeout': 30,
             'retries': DOWNLOADS_RETRIES,
-            'extractor_args': {'youtube': {'player_client': ['tv', 'ios', 'web']}},
+            'extractor_args': {'youtube': {'player_client': ['web_music', 'tv', 'web', 'android']}},
             'postprocessors': [
                 {
                     'key': 'FFmpegExtractAudio',
