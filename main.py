@@ -51,6 +51,14 @@ DOWNLOADERS = {
     "threads_post": get_threads_post
 }
 
+CONTENT_EMOJIS = {
+    "short_video": "🩳",
+    "instagram_post": "📸",
+    "x_post": "🐦",
+    "music": "🎧",
+    "threads_post": "🧵",
+}
+
 def extract_content_info(message: Message):
     if not message.text:
         return None
@@ -105,7 +113,7 @@ async def handle_download_request(message: Message, url: str, content_type: str)
         return
 
     sender = message.from_user.username or message.from_user.full_name
-    header = f"<b>@{html.quote(sender)}</b> -- <a href='{url}'>🔗</a>"
+    header = f"<b>@{html.quote(sender)}</b> — <a href='{url}'>{CONTENT_EMOJIS.get(content_type, '')}🔗</a>"
     author = html.quote(result.author)
     caption = html.quote(result.caption[:800])
     final_text = f"{header}\n🎬 <b>{author}</b>\n<blockquote expandable>📝 {caption}\n</blockquote>"

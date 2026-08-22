@@ -16,7 +16,7 @@ class ColorFormatter(logging.Formatter):
     def format(self, record):
         color = self.COLORS.get(record.levelno, self.RESET)
         record.levelname = f"{color}{record.levelname:<8}{self.RESET}"
-        record.name = f"{self.GRAY}{record.name}{self.RESET}"
+        record.name = f"{self.GRAY}{record.name:<20}{self.RESET}"
         record.msg = f"{color}{record.msg}{self.RESET}"
         
         return super().format(record)
