@@ -4,6 +4,7 @@ import logging
 from aiogram import Bot, Dispatcher, html
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramEntityTooLarge
 from aiogram.types import (
     FSInputFile,
     InputMediaPhoto,
@@ -21,7 +22,7 @@ from modules.downloaders import (
     get_ytmusic,
 )
 from modules.threads import get_threads_post
-from modules.logging import setup_logging
+from modules.logger import setup_logging
 from modules.speechtotext import speechtotext_router
 
 
@@ -121,6 +122,8 @@ async def handle_download_request(message: Message, url: str, content_type: str)
     def to_input(media_file):
         return URLInputFile(media_file.path) if media_file.is_remote else FSInputFile(media_file.path)
 
+    success = False
+
     try:
         if not result.files:
             await message.answer(final_text)
@@ -147,7 +150,11 @@ async def handle_download_request(message: Message, url: str, content_type: str)
             await message.answer_media_group(media=media_group)
 
         await processing_msg.delete()
+        success = True
 
+    except TelegramEntityTooLarge:
+        await processing_msg.edit_text("❌ Файл (один з файлів) завеликий")
+        
     except Exception as e:
         logger.error(f"Sending error: {e}")
         await processing_msg.edit_text(f"❌ Сталася помилка: {e}")
@@ -156,10 +163,11 @@ async def handle_download_request(message: Message, url: str, content_type: str)
         for media_file in result.files:
             clean_file(media_file)
 
-    try:
-        await message.delete()
-    except Exception as e:
-        logger.warning(f"Unable to delete message: {e}")
+    if success:
+        try:
+            await message.delete()
+        except Exception as e:
+            logger.warning(f"Unable to delete message: {e}")
 
 # ===========================================================================
 
