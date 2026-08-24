@@ -140,14 +140,32 @@ async def handle_download_request(message: Message, url: str, content_type: str)
                 await message.answer_audio(audio=media, caption=header, title=caption, performer=author)
 
         else:
-            media_group = [
-                (InputMediaVideo if f.type in ("video", "gif") else InputMediaPhoto)(
-                    media=to_input(f),
-                    caption=final_text if i == 0 else None,
-                )
-                for i, f in enumerate(result.files)
-            ]
-            await message.answer_media_group(media=media_group)
+            CHUNK_SIZE = 10
+            files = result.files
+
+            for start in range(0, len(files), CHUNK_SIZE):
+                chunk = files[start:start + CHUNK_SIZE]
+
+                if len(chunk) == 1:
+                    media_file = chunk[0]
+                    media = to_input(media_file)
+                    cap = final_text if start == 0 else None
+                    if media_file.type in ("video", "gif"):
+                        await message.answer_video(video=media, caption=cap)
+                    else:
+                        await message.answer_photo(photo=media, caption=cap)
+                else:
+                    media_group = [
+                        (InputMediaVideo if f.type in ("video", "gif") else InputMediaPhoto)(
+                            media=to_input(f),
+                            caption=final_text if (start == 0 and i == 0) else None,
+                        )
+                        for i, f in enumerate(chunk)
+                    ]
+                    await message.answer_media_group(media=media_group)
+
+                if start + CHUNK_SIZE < len(files):
+                    await asyncio.sleep(1)
 
         await processing_msg.delete()
         success = True
