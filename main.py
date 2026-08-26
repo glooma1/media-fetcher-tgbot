@@ -101,7 +101,7 @@ async def with_retries(processing_msg: Message, get_function, url: str):
 @dp.message(extract_content_info)
 async def handle_download_request(message: Message, url: str, content_type: str):
     logger.info(f"Request @{message.from_user.username or message.from_user.id} -> {content_type}: {url}")
-    processing_msg = await message.reply("⏳ Завантажую...")
+    processing_msg = await message.reply("⏳ Завантажую...", disable_notification=True)
 
     downloader = DOWNLOADERS.get(content_type)
     if downloader is None:
@@ -126,18 +126,18 @@ async def handle_download_request(message: Message, url: str, content_type: str)
 
     try:
         if not result.files:
-            await message.answer(final_text)
+            await message.answer(final_text, disable_notification=True)
 
         elif len(result.files) == 1:
             media_file = result.files[0]
             media = to_input(media_file)
 
             if media_file.type in ("video", "gif"):
-                await message.answer_video(video=media, caption=final_text)
+                await message.answer_video(video=media, caption=final_text, disable_notification=True)
             elif media_file.type in ("photo", "image"):
-                await message.answer_photo(photo=media, caption=final_text)
+                await message.answer_photo(photo=media, caption=final_text, disable_notification=True)
             else:
-                await message.answer_audio(audio=media, caption=header, title=caption, performer=author)
+                await message.answer_audio(audio=media, caption=header, title=caption, performer=author, disable_notification=True)
 
         else:
             CHUNK_SIZE = 10
@@ -151,9 +151,9 @@ async def handle_download_request(message: Message, url: str, content_type: str)
                     media = to_input(media_file)
                     cap = final_text if start == 0 else None
                     if media_file.type in ("video", "gif"):
-                        await message.answer_video(video=media, caption=cap)
+                        await message.answer_video(video=media, caption=cap, disable_notification=True)
                     else:
-                        await message.answer_photo(photo=media, caption=cap)
+                        await message.answer_photo(photo=media, caption=cap, disable_notification=True)
                 else:
                     media_group = [
                         (InputMediaVideo if f.type in ("video", "gif") else InputMediaPhoto)(
@@ -162,7 +162,7 @@ async def handle_download_request(message: Message, url: str, content_type: str)
                         )
                         for i, f in enumerate(chunk)
                     ]
-                    await message.answer_media_group(media=media_group)
+                    await message.answer_media_group(media=media_group, disable_notification=True)
 
                 if start + CHUNK_SIZE < len(files):
                     await asyncio.sleep(1)
