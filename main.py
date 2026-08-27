@@ -24,12 +24,15 @@ from modules.downloaders import (
 from modules.threads import get_threads_post
 from modules.logger import setup_logging
 from modules.speechtotext import speechtotext_router
+from modules.llm import llm_router
 
 
 logger = logging.getLogger(__name__)
 
 dp = Dispatcher()
+
 dp.include_router(speechtotext_router)
+dp.include_router(llm_router)
 
 # ===========================================================================
 

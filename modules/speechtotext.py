@@ -32,6 +32,7 @@ async def _get_voice_transcription(filepath:str):
 
 @speechtotext_router.message(F.voice)
 async def handle_voice_message(message: Message):
+    logger.info(f"Transcribing voice message from @{message.from_user.username or message.from_user.id}")
     processing_msg = await message.reply("🎧 Слухаю...")
     file_path = f"{DOWNLOADS_PATH}{uuid.uuid4()}.ogg"
 
@@ -46,6 +47,7 @@ async def handle_voice_message(message: Message):
             return
 
         await processing_msg.edit_text(f"🗣 {transcription}")
+        logger.info(f"Transcription completed successfully")
 
     except Exception as e:
         logger.error(f"Error processing audio: {e}")
