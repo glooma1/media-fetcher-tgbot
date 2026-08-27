@@ -136,7 +136,7 @@ async def handle_download_request(message: Message, url: str, content_type: str)
             media = to_input(media_file)
 
             if media_file.type in ("video", "gif"):
-                await message.answer_video(video=media, caption=final_text, disable_notification=True)
+                await message.answer_video(video=media, caption=final_text, supports_streaming=True, disable_notification=True)
             elif media_file.type in ("photo", "image"):
                 await message.answer_photo(photo=media, caption=final_text, disable_notification=True)
             else:
@@ -154,17 +154,30 @@ async def handle_download_request(message: Message, url: str, content_type: str)
                     media = to_input(media_file)
                     cap = final_text if start == 0 else None
                     if media_file.type in ("video", "gif"):
-                        await message.answer_video(video=media, caption=cap, disable_notification=True)
+                        await message.answer_video(video=media, caption=cap, supports_streaming=True, disable_notification=True)
                     else:
                         await message.answer_photo(photo=media, caption=cap, disable_notification=True)
                 else:
-                    media_group = [
-                        (InputMediaVideo if f.type in ("video", "gif") else InputMediaPhoto)(
-                            media=to_input(f),
-                            caption=final_text if (start == 0 and i == 0) else None,
-                        )
-                        for i, f in enumerate(chunk)
-                    ]
+                    media_group = []
+                    for i, f in enumerate(chunk):
+                        cap = final_text if (start == 0 and i == 0) else None
+                        
+                        if f.type in ("video", "gif"):
+                            media_group.append(
+                                InputMediaVideo(
+                                    media=to_input(f),
+                                    caption=cap,
+                                    supports_streaming=True
+                                )
+                            )
+                        else:
+                            media_group.append(
+                                InputMediaPhoto(
+                                    media=to_input(f),
+                                    caption=cap
+                                )
+                            )
+                            
                     await message.answer_media_group(media=media_group, disable_notification=True)
 
                 if start + CHUNK_SIZE < len(files):
