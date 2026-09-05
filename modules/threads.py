@@ -68,6 +68,20 @@ def parse_post(raw_post: dict):
             photo_url = image_data["candidates"][0]["url"]
             media_list.append({"url": photo_url, "type": "photo"})
 
+    if not media_list:
+        nested_videos = find_all_values_by_key(raw_post, "video_versions")
+        for vv in nested_videos:
+            if vv:
+                media_list.append({"url": vv[0]["url"], "type": "video"})
+                break  # беремо перше знайдене відео, щоб не тягнути дублі/прев'ю
+
+        if not media_list:
+            nested_images = find_all_values_by_key(raw_post, "image_versions2")
+            for img in nested_images:
+                if img and img.get("candidates"):
+                    media_list.append({"url": img["candidates"][0]["url"], "type": "photo"})
+                    break
+
     caption_data = raw_post.get("caption")
     if caption_data and caption_data.get("text"):
         caption_text = caption_data["text"]
@@ -86,7 +100,6 @@ def parse_post(raw_post: dict):
         "username": username,
         "media": media_list,
     }
-
 
 def open_page_in_browser(url_to_open: str):
     with sync_playwright() as playwright:
