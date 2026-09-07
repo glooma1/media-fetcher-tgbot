@@ -1,30 +1,30 @@
 import logging
 import uuid
 
-from openai import AsyncOpenAI
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.types import Message
+from openai import AsyncOpenAI
+
 from modules.config import DOWNLOADS_PATH, OPENAI_SPEECH_API_KEY, OPENAI_SPEECH_MODEL
-from modules.downloaders import clean_file, Media
+from modules.downloaders import Media, clean_file
 
 logger = logging.getLogger(__name__)
 
-client = AsyncOpenAI(
-    api_key=OPENAI_SPEECH_API_KEY
-)
+client = AsyncOpenAI(api_key=OPENAI_SPEECH_API_KEY)
 
 speechtotext_router = Router(name="speechtotext")
 
-async def _get_voice_transcription(filepath:str):
+
+async def _get_voice_transcription(filepath: str) -> str:
     try:
         with open(filepath, "rb") as audio:
             transcription = await client.audio.transcriptions.create(
                 model=OPENAI_SPEECH_MODEL,
                 file=audio,
-                language="uk"
+                language="uk",
             )
         return transcription.text
-    
+
     except Exception as e:
         logger.error(f"Whisper API error: {e}")
         raise
@@ -47,7 +47,7 @@ async def handle_voice_message(message: Message):
             return
 
         await processing_msg.edit_text(f"🗣 {transcription}")
-        logger.info(f"Transcription completed successfully")
+        logger.info("Transcription completed successfully")
 
     except Exception as e:
         logger.error(f"Error processing audio: {e}")

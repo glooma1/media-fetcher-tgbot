@@ -63,6 +63,8 @@ CONTENT_EMOJIS = {
     "threads_post": "🧵",
 }
 
+MEDIA_GROUP_SIZE = 10
+
 def extract_content_info(message: Message):
     if not message.text:
         return None
@@ -101,6 +103,84 @@ async def with_retries(processing_msg: Message, get_function, url: str):
 
 # ===========================================================================
 
+def get_media_input(media_file):
+    if media_file.is_remote:
+        return URLInputFile(media_file.path)
+    return FSInputFile(media_file.path)
+
+
+async def send_media_file(message: Message, media_file, caption, audio_title, header, author):
+    media = get_media_input(media_file)
+
+    if media_file.type in ("video", "gif"):
+        await message.answer_video(
+            video=media,
+            caption=caption,
+            supports_streaming=True,
+            disable_notification=True,
+        )
+    elif media_file.type in ("photo", "image"):
+        await message.answer_photo(
+            photo=media,
+            caption=caption,
+            disable_notification=True,
+        )
+    else:
+        await message.answer_audio(
+            audio=media,
+            caption=header,
+            title=audio_title,
+            performer=author,
+            disable_notification=True,
+        )
+
+
+async def send_media_group(message: Message, files, caption):
+    media_group = []
+
+    for index, media_file in enumerate(files):
+        item_caption = caption if index == 0 else None
+        media = get_media_input(media_file)
+
+        if media_file.type in ("video", "gif"):
+            media_group.append(
+                InputMediaVideo(
+                    media=media,
+                    caption=item_caption,
+                    supports_streaming=True,
+                )
+            )
+        else:
+            media_group.append(
+                InputMediaPhoto(
+                    media=media,
+                    caption=item_caption,
+                )
+            )
+
+    await message.answer_media_group(
+        media=media_group,
+        disable_notification=True,
+    )
+
+
+async def send_media_files(message: Message, files, final_text, audio_title, header, author):
+    if not files:
+        await message.answer(final_text, disable_notification=True)
+        return
+
+    for start in range(0, len(files), MEDIA_GROUP_SIZE):
+        chunk = files[start:start + MEDIA_GROUP_SIZE]
+        caption = final_text if start == 0 else None
+
+        if len(chunk) == 1:
+            await send_media_file(message, chunk[0], caption, audio_title, header, author)
+        else:
+            await send_media_group(message, chunk, caption)
+
+        if start + MEDIA_GROUP_SIZE < len(files):
+            await asyncio.sleep(1)
+
 @dp.message(extract_content_info)
 async def handle_download_request(message: Message, url: str, content_type: str):
     logger.info(f"Request @{message.from_user.username or message.from_user.id} -> {content_type}: {url}")
@@ -122,66 +202,10 @@ async def handle_download_request(message: Message, url: str, content_type: str)
     caption = html.quote(result.caption[:800])
     final_text = f"{header}\n🎬 <b>{author}</b>\n<blockquote expandable>📝 {caption}\n</blockquote>"
 
-    def to_input(media_file):
-        return URLInputFile(media_file.path) if media_file.is_remote else FSInputFile(media_file.path)
-
     success = False
 
     try:
-        if not result.files:
-            await message.answer(final_text, disable_notification=True)
-
-        elif len(result.files) == 1:
-            media_file = result.files[0]
-            media = to_input(media_file)
-
-            if media_file.type in ("video", "gif"):
-                await message.answer_video(video=media, caption=final_text, supports_streaming=True, disable_notification=True)
-            elif media_file.type in ("photo", "image"):
-                await message.answer_photo(photo=media, caption=final_text, disable_notification=True)
-            else:
-                await message.answer_audio(audio=media, caption=header, title=caption, performer=author, disable_notification=True)
-
-        else:
-            CHUNK_SIZE = 10
-            files = result.files
-
-            for start in range(0, len(files), CHUNK_SIZE):
-                chunk = files[start:start + CHUNK_SIZE]
-
-                if len(chunk) == 1:
-                    media_file = chunk[0]
-                    media = to_input(media_file)
-                    cap = final_text if start == 0 else None
-                    if media_file.type in ("video", "gif"):
-                        await message.answer_video(video=media, caption=cap, supports_streaming=True, disable_notification=True)
-                    else:
-                        await message.answer_photo(photo=media, caption=cap, disable_notification=True)
-                else:
-                    media_group = []
-                    for i, f in enumerate(chunk):
-                        cap = final_text if (start == 0 and i == 0) else None
-                        
-                        if f.type in ("video", "gif"):
-                            media_group.append(
-                                InputMediaVideo(
-                                    media=to_input(f),
-                                    caption=cap,
-                                    supports_streaming=True
-                                )
-                            )
-                        else:
-                            media_group.append(
-                                InputMediaPhoto(
-                                    media=to_input(f),
-                                    caption=cap
-                                )
-                            )
-                            
-                    await message.answer_media_group(media=media_group, disable_notification=True)
-
-                if start + CHUNK_SIZE < len(files):
-                    await asyncio.sleep(1)
+        await send_media_files(message, result.files, final_text, caption, header, author)
 
         await processing_msg.delete()
         success = True

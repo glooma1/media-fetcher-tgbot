@@ -1,8 +1,8 @@
 import logging
 
-from openai import AsyncOpenAI
-from aiogram import Router, F, Bot
+from aiogram import Bot, F, Router
 from aiogram.types import Message
+from openai import AsyncOpenAI
 
 from modules.config import OPENAI_LLM_API, OPENAI_MODEL, LLM_MASTER_PROMPT
 
@@ -30,16 +30,12 @@ async def handle_llm(message: Message, bot: Bot):
     status_msg = await message.reply("💡Думаю...")
 
     try:
-        context = ""
-
-        if message.reply_to_message:
-            replied = message.reply_to_message
-
-            if replied.text:
-                context = (
-                    "Message user has replied to:\n"
-                    f"{replied.text}\n\n"
-                )
+        replied = message.reply_to_message
+        context = (
+            f"Message user has replied to:\n{replied.text}\n\n"
+            if replied and replied.text
+            else ""
+        )
 
         full_prompt = f"{context}User request:\n{prompt}"
 
@@ -50,7 +46,7 @@ async def handle_llm(message: Message, bot: Bot):
         )
 
         await status_msg.edit_text(response.output_text)
-        logger.info(f"LLM Request completed successfully")
+        logger.info("LLM Request completed successfully")
 
     except Exception as e:
         logger.error(f"LLM Request error: {e}")
