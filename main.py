@@ -20,6 +20,7 @@ from modules.downloaders import (
     get_short_video,
     get_x_post_content,
     get_ytmusic,
+    get_tiktok_post
 )
 from modules.threads import get_threads_post
 from modules.logger import setup_logging
@@ -35,36 +36,43 @@ dp.include_router(speechtotext_router)
 dp.include_router(llm_router)
 
 # ===========================================================================
+MEDIA_GROUP_SIZE = 10
 
 CONTENT_PATTERNS = (
-    ("tiktok.com", "short_video"),
-    ("youtube.com/shorts/", "short_video"),
-    ("instagram.com/reel/", "short_video"),
+    ("tiktok.com", "tiktok"),
+    ("youtube.com/shorts/", "youtube_shorts"),
+    ("instagram.com/reel/", "instagram_reels"),
     ("instagram.com/p/", "instagram_post"),
     ("x.com/", "x_post"),
     ("twitter.com/", "x_post"),
-    ("music.youtube.com/", "music"),
+    ("music.youtube.com/", "youtube_music"),
     ("threads.com/", "threads_post"),
-    ("twitch.tv/", "short_video")
+    ("twitch.tv/", "twitch_clip"),
 )
 
 DOWNLOADERS = {
-    "short_video": get_short_video,
+    "youtube_shorts": get_short_video,
+    "instagram_reels": get_short_video,
+    "twitch_clip": get_short_video,
     "instagram_post": get_ig_post,
-    "music": get_ytmusic,
+    "youtube_music": get_ytmusic,
     "x_post": get_x_post_content,
-    "threads_post": get_threads_post
+    "threads_post": get_threads_post,
+    "tiktok": get_tiktok_post,
 }
 
-CONTENT_EMOJIS = {
-    "short_video": "🩳",
+CONTENT_EMOJI = {
+    "tiktok": "📱",
+    "tiktok_post": "📱",
+    "youtube_shorts": "🩳",
+    "youtube_music": "🎵",
+    "instagram_reels": "🔄",
     "instagram_post": "📸",
-    "x_post": "🐦",
-    "music": "🎧",
+    "x_post": "𝕏",
     "threads_post": "🧵",
+    "twitch_clip": "👾",
 }
 
-MEDIA_GROUP_SIZE = 10
 
 def extract_content_info(message: Message):
     if not message.text:
@@ -198,7 +206,7 @@ async def handle_download_request(message: Message, url: str, content_type: str)
         return
 
     sender = message.from_user.username or message.from_user.full_name
-    header = f"<b>@{html.quote(sender)}</b> — <a href='{url}'>{CONTENT_EMOJIS.get(content_type, '')}🔗</a>"
+    header = f"<b>@{html.quote(sender)}</b> — <a href='{url}'>{CONTENT_EMOJI.get(content_type, '')}🔗</a>"
     author = html.quote(result.author)
     caption = html.quote(result.caption[:800])
     final_text = f"{header}\n🎬 <b>{author}</b>\n<blockquote expandable>📝 {caption}\n</blockquote>"

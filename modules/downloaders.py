@@ -221,3 +221,37 @@ def get_x_post_content(url: str):
     except Exception as e:
         logger.error(f"X/Twitter fetch error {url}: {e}")
         return PulledData(error=str(e))
+
+
+# Tiktok posts
+def get_tiktok_post(url: str) -> PulledData:
+    logger.info(f"Fetching TikTok post: {url}")
+
+    try:
+        response = requests.get("https://tikwm.com/api/", params={"url": url}, timeout=15)
+        response.raise_for_status()
+        data = response.json().get("data", {})
+    except Exception as e:
+        logger.error(f"TikTok fetch error {url}: {e}")
+        return PulledData(error=f"Не вдалося отримати дані TikTok: {e}")
+
+    if not data:
+        logger.warning(f"TikTok API returned no data for {url}")
+        return PulledData(error="TikTok API не повернув дані (можливо, застаріле/приватне посилання).")
+
+    images = data.get("images")
+    if images:
+        files = [Media(path=u, type="photo", is_remote=True) for u in images]
+    else:
+        video_url = data.get("play")
+        if not video_url:
+            logger.warning(f"TikTok API did not return media file for {url}")
+            return PulledData(error="TikTok API не повернув медіафайл.")
+        files = [Media(path=video_url, type="video", is_remote=True)]
+
+    logger.info(f"TikTok fetch complete ({url})")
+    return PulledData(
+        files=files,
+        author=data.get("author", {}).get("nickname", "Unknown"),
+        caption=data.get("title", "") or "Без опису",
+    )
