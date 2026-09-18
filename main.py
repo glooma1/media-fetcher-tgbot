@@ -44,7 +44,8 @@ CONTENT_PATTERNS = (
     ("x.com/", "x_post"),
     ("twitter.com/", "x_post"),
     ("music.youtube.com/", "music"),
-    ("threads.com/", "threads_post")
+    ("threads.com/", "threads_post"),
+    ("twitch.tv/", "short_video")
 )
 
 DOWNLOADERS = {
