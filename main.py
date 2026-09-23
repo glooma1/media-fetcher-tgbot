@@ -62,8 +62,8 @@ DOWNLOADERS = {
 }
 
 CONTENT_EMOJI = {
-    "tiktok": "📱",
-    "tiktok_post": "📱",
+    "tiktok": "🪝",
+    "tiktok_post": "🪝",
     "youtube_shorts": "🩳",
     "youtube_music": "🎵",
     "instagram_reels": "🔄",

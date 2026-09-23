@@ -47,6 +47,22 @@ def find_all_values_by_key(data, key_name):
     return results
 
 
+def find_dicts_with_code(data, code):
+    results = []
+
+    if isinstance(data, dict):
+        if data.get("code") == code:
+            results.append(data)
+        for value in data.values():
+            results.extend(find_dicts_with_code(value, code))
+
+    elif isinstance(data, list):
+        for element in data:
+            results.extend(find_dicts_with_code(element, code))
+
+    return results
+
+
 def parse_post(raw_post: dict):
     media_list = []
 
@@ -123,12 +139,11 @@ def extract_json_scripts_from_html(html: str):
     return re.findall(pattern, html, re.DOTALL)
 
 
-def find_posts_in_html(html: str):
-    posts = []
-    json_texts = extract_json_scripts_from_html(html)
+def find_post_in_html(html: str, shortcode: str):
+    candidates = []
 
-    for json_text in json_texts:
-        if "thread_items" not in json_text:
+    for json_text in extract_json_scripts_from_html(html):
+        if shortcode not in json_text:
             continue
 
         try:
@@ -136,15 +151,17 @@ def find_posts_in_html(html: str):
         except json.JSONDecodeError:
             continue
 
-        all_thread_items_lists = find_all_values_by_key(data, "thread_items")
+        for raw_post in find_dicts_with_code(data, shortcode):
+            candidates.append(parse_post(raw_post))
 
-        for thread_items in all_thread_items_lists:
-            for item in thread_items:
-                raw_post = item.get("post")
-                if raw_post:
-                    posts.append(parse_post(raw_post))
+    if not candidates:
+        return None
 
-    return posts
+    # один і той самий пост може траплятись кілька разів - беремо найповніший
+    return max(
+        candidates,
+        key=lambda p: (len(p["media"]), p["username"] != "Unknown", bool(p["text"])),
+    )
 
 
 def download_media_files(media_list: list) -> list:
@@ -195,19 +212,10 @@ def get_threads_post(url: str) -> PulledData:
         if not shortcode:
             return PulledData(error="Не вдалося розпізнати посилання на пост")
 
-    posts = find_posts_in_html(html)
-
-    if not posts:
-        return PulledData(error="Не вдалося знайти дані поста на сторінці")
-
-    target_post = None
-    for post in posts:
-        if post["code"] == shortcode:
-            target_post = post
-            break
+    target_post = find_post_in_html(html, shortcode)
 
     if target_post is None:
-        target_post = posts[0]
+        return PulledData(error="Не вдалося знайти саме цей пост на сторінці")
 
     downloaded_media = download_media_files(target_post["media"])
 
